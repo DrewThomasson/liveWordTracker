@@ -85,8 +85,8 @@ class Transcriber:
                 audio_np,
                 language='en',
                 vad_parameters={
-                    'threshold': 0.5,
-                    'min_silence_duration_ms': 500
+                    'threshold': 0.95,
+                    'min_silence_duration_ms': 1500
                 }
             )
             
@@ -174,9 +174,17 @@ def main():
     server_thread.daemon = True
     server_thread.start()
     
+    MIN_VOLUME_THRESHOLD = -40  # dB, adjust based on noise environment
+    
     for audio_buffer in processor.start_recording():
         try:
             volume = processor.get_volume(audio_buffer)
+
+            # Ignore low-volume recordings (assumed silence/noise)
+            if volume < MIN_VOLUME_THRESHOLD:
+                print(f"[{datetime.now()}] Skipping transcription (Low volume: {volume:.1f}dB)")
+                continue  
+
             text = transcriber.transcribe(audio_buffer)
             
             now = datetime.now()
@@ -184,6 +192,7 @@ def main():
 
             if text:
                 status += f" | Text: {text}"
+                
                 conn = sqlite3.connect('audio_transcriptions.db', isolation_level=None)
                 conn.execute('''
                     INSERT INTO transcriptions (timestamp, text, volume, hour, day_of_week, date)
