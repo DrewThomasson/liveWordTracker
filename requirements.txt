@@ -1,0 +1,6 @@
+sounddevice
+numpy
+faster-whisper
+flask
+matplotlib
+pysqlite3
